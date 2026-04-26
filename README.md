@@ -1,6 +1,8 @@
-# Quarto Legal Templates
+# Legal Contract Template
 
-A lightweight toolkit for authoring legal documents in Markdown and rendering them as polished, self-contained HTML files. Built on [Quarto](https://quarto.org), with a custom Pandoc Lua filter that applies standard legal numbering conventions and a minimal stylesheet suited for printing or digital distribution.
+A lightweight template for authoring legal documents in markdown and rendering them in self-contained HTML.
+
+Built on [Quarto](https://quarto.org), with a custom Pandoc Lua filter that applies standard legal numbering conventions and a minimal stylesheet suited for printing or digital distribution.
 
 ## Features
 
@@ -34,7 +36,7 @@ brew install quarto
 
 ## Customising variables
 
-Edit `_variables.yml` to set the party names and signing date before rendering:
+Edit `_variables.yml` to set the variables used in the contract:
 
 ```yaml
 parties:
@@ -94,5 +96,5 @@ The filter replaces `@sec-payment` with a hyperlink such as *clause 2.1*.
 
 ## Licence
 
-Apache 2.0 — see [LICENSE](LICENSE).  
+Apache 2.0 — see [LICENSE](LICENSE).
 Copyright &copy; 2026 [Blissful Living Foundation](https://labs.blissful.im).
