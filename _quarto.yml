@@ -1,0 +1,21 @@
+project:
+  type: default
+
+metadata-files: 
+  - _variables.yml
+
+format:
+  html:
+    css: style.css
+    filters:
+      - legal-numbering.lua
+    embed-resources: true
+    format-links: false
+    number-sections: false
+    crossrefs-hover: false
+    theme: none
+    minimal: true
+
+crossref:
+  sec-prefix: ""
+  chapters: false

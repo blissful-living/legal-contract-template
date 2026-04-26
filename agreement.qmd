@@ -1,0 +1,43 @@
+---
+title: "General Business Agreement"
+---
+
+This Agreement is entered into as of {{< var dates.signed_date >}} between **{{< var parties.person_1 >}}** and **{{< var parties.person_2 >}}**.
+
+# SCOPE OF COLLABORATION {#sec-scope}
+
+The Parties agree to collaborate on business activities. The specific roles and responsibilities are governed by @sec-purpose and are subject to the financial obligations in @sec-contributions.
+
+## Purpose and Objectives {#sec-purpose}
+
+### The Parties intend to combine expertise to develop a new commercial venture focused on the research, development, and eventual global distribution of proprietary software solutions designed to optimise supply chain logistics for small to medium-sized enterprises. {#sec-venture} 
+
+### The specific roles shall be determined by mutual consent, as defined in @sec-venture, and shall include detailed project milestones that must be met within the first fiscal quarter to ensure the continued viability of the partnership. {#sec-roles}
+
+# CONTRIBUTIONS {#sec-contributions}
+
+Each party shall provide specific resources as outlined in this @sec-contributions.
+
+## Financial and Intellectual Property {#sec-ip}
+
+### {{< var parties.person_1 >}} shall provide the initial working capital required for operations, which includes but is not limited to funding for legal fees, marketing initiatives, and the procurement of necessary hardware for the primary development team located at the centralised office. {#sec-capital}
+
+### {{< var parties.person_2 >}} shall grant a non-exclusive licence for the use of existing proprietary algorithms and data structures which are essential for the foundational architecture of the proposed commercial venture. {#sec-license} 
+
+#### Such licence is limited to the term defined in @sec-term and shall only be utilised for purposes directly related to the collaborative project and not for any independent commercial gain outside of this specific agreement. {#sec-usage}
+
+#### The licence granted in @sec-license is non-transferable and may not be sub-licensed to any third-party entities without the express written consent of the providing party. {#sec-sublicense}
+
+# TERM AND TERMINATION {#sec-term}
+
+## Duration of Agreement {#sec-duration}
+
+### This Agreement shall continue for twelve (12) months from {{< var dates.signed_date >}}. {#sec-period}
+
+### Termination is subject to the notice periods defined in @sec-scope.
+
+# SIGNATURES {#sec-signatures}
+
+**{{< var parties.person_1 >}}** Date: _________________  
+
+**{{< var parties.person_2 >}}** Date: _________________

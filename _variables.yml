@@ -1,0 +1,6 @@
+parties:
+  person_1: "Alice Smith"
+  person_2: "Bob Jones"
+
+dates:
+  signed_date: "April 26, 2026"
