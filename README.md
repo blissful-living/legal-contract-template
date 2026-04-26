@@ -88,6 +88,10 @@ Payment is governed by @sec-payment.
 
 The filter replaces `@sec-payment` with a hyperlink such as *clause 2.1*.
 
+## Preview
+
+![Rendered output](example.png)
+
 ## Licence
 
 Apache 2.0 — see [LICENSE](LICENSE).  
