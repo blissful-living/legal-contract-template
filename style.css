@@ -1,4 +1,11 @@
-html, body, p, h2, h3, h4, span, a {
+@font-face {
+  font-family: 'Caveat';
+  font-style: normal;
+  font-weight: 400;
+  src: url('caveat.woff2') format('woff2');
+}
+
+html, body, p, h2, h3, h4, h5, span, a {
     font-family: Arial, Helvetica, sans-serif;
     font-size: 11pt !important;
     font-weight: normal !important;
@@ -9,6 +16,8 @@ html, body, p, h2, h3, h4, span, a {
 body {
     max-width: 800px;
     margin: 40px auto;
+    padding: 0 8px;
+    box-sizing: border-box;
 }
 
 p {
@@ -16,29 +25,45 @@ p {
     margin-bottom: 6pt;
 }
 
-h1, h2, h3, h4 {
-    display: block; 
+h1, h2, h3, h4, h5 {
+    display: block;
     position: relative;
     margin-top: 12pt;
     margin-bottom: 6pt;
 }
 
-h1, h1 span {
-    font-size: 11pt !important;
+/* H1 = document / part title (main contract, schedule separator) — no section number */
+h1 {
+    font-size: 13pt !important;
     font-weight: bold !important;
-    text-transform: uppercase;
-}
-
-h1 { margin-top: 24pt; margin-bottom: 8pt; margin-left: 0; padding-left: 2.5em; }
-h2 { margin-left: 0; padding-left: 3.5em; }
-h3 { margin-left: 3.5em; padding-left: 2.5em; } 
-h4 { margin-left: 6.0em; padding-left: 3.0em; } 
-
-h1.title {
     padding-left: 0;
     margin-left: 0;
-    font-size: 16pt !important;
+    margin-top: 36pt;
+    margin-bottom: 12pt;
 }
+
+/* First H1 is the document title — no top margin needed at the head of the page */
+h1.doc-title {
+    margin-top: 0;
+    font-size: 18pt !important;
+    text-align: left;
+}
+
+/* H2 = numbered top-level section (was H1) */
+h2, h2 span {
+    font-size: 11pt !important;
+    font-weight: bold !important;
+}
+h2 { margin-top: 24pt; margin-bottom: 8pt; margin-left: 0; padding-left: 2.5em; }
+
+/* H3 = sub-clause heading (was H2) */
+h3 { margin-left: 0; padding-left: 3.5em; }
+
+/* H4 = (a)/(b)/(c) items (was H3) */
+h4 { margin-left: 3.5em; padding-left: 2.5em; }
+
+/* H5 = (i)/(ii)/(iii) items (was H4) */
+h5 { margin-left: 6.0em; padding-left: 3.0em; }
 
 .header-section-number {
     font-weight: bold !important;
@@ -49,17 +74,209 @@ h1.title {
     padding: 0;
 }
 
-h1 .header-section-number { width: 2.5em; }
-h2 .header-section-number { width: 3.5em; }
-h3 .header-section-number { width: 2.5em; }
-h4 .header-section-number { width: 3.0em; }
+h2 .header-section-number { width: 2.5em; }
+h3 .header-section-number { width: 3.5em; }
+h4 .header-section-number { width: 2.5em; }
+h5 .header-section-number { width: 3.0em; }
+
+/* Preserve bold inline labels (e.g. **Bold label:**) within clause headings */
+h3 strong, h4 strong, h5 strong {
+    font-weight: bold !important;
+}
 
 a, a.quarto-xref {
     color: black;
     text-decoration: underline;
 }
 
-header, #title-block-header {
-    border-bottom: none !important;
+/* Safety net: hide Quarto's title block if it renders despite meta.title being cleared */
+#title-block-header {
+    display: none;
+}
+
+/* Tables: borders, proportional columns, readable padding */
+table {
+    border-collapse: collapse;
+    width: 100%;
+    table-layout: auto;
+    margin-top: 12pt;
+    margin-bottom: 12pt;
+}
+
+th, td {
+    border: 1px solid #bbb;
+    padding: 5pt 8pt;
+    vertical-align: top;
+    text-align: left;
+}
+
+th {
+    font-weight: bold !important;
+    background-color: #f0f0f0;
+}
+
+/* First column of definition tables: keep narrow, don't wrap */
+td:first-child {
+    white-space: nowrap;
+}
+
+/* Table of Contents */
+nav#toc {
+    border: 1px solid #ccc;
+    background: #f8f8f8;
+    padding: 10pt 14pt;
+    margin-bottom: 24pt;
+}
+
+nav#toc p.toc-title {
+    font-size: 13pt !important;
+    font-weight: bold !important;
+    margin: 0 0 6pt 0;
+    text-align: center;
+}
+
+nav#toc ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+nav#toc li {
+    margin: 2pt 0;
+    line-height: 1.4;
+}
+
+nav#toc li.toc-h2 { padding-left: 1.5em; }
+nav#toc li.toc-h3 { padding-left: 3.0em; }
+nav#toc li.toc-h4 { padding-left: 4.5em; }
+nav#toc li.toc-h5 { padding-left: 6.0em; }
+
+nav#toc li.toc-h1 a {
+    font-weight: bold !important;
+}
+
+nav#toc a {
+    text-decoration: none;
+}
+
+nav#toc a:hover {
+    text-decoration: underline;
+}
+
+/* ================================================================
+   EXECUTION / SIGNATURE BLOCK
+   ================================================================ */
+
+.execution-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    column-gap: 48pt;
+    row-gap: 32pt;
+    margin-top: 20pt;
+}
+
+@media (max-width: 600px) {
+    .execution-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.signatory-behalf {
+    margin-top: 0;
     margin-bottom: 20pt;
+    line-height: 1.4;
+}
+
+.sig-field {
+    margin-bottom: 18pt;
+}
+
+/* Handwriting-style auto-signature */
+.sig-handwriting {
+    font-family: 'Caveat', cursive;
+    font-size: 30pt !important;
+    font-weight: 400 !important;
+    line-height: 1;
+    margin: 0;
+    padding-bottom: 4pt;
+    min-height: 38pt;
+}
+
+/* Reserve the same vertical space when auto-sign is off */
+.sig-handwriting--blank {
+    visibility: hidden;
+}
+
+/* Printed name, role, date */
+.sig-value {
+    font-size: 12pt !important;
+    margin: 0;
+    padding-bottom: 4pt;
+    min-height: 18pt;
+}
+
+/* Horizontal rule beneath each field */
+.sig-line {
+    border: none;
+    border-top: 1px solid #000;
+    margin: 0 0 3pt 0;
+}
+
+/* Field label beneath the rule */
+.sig-label {
+    font-size: 8.5pt !important;
+    color: #555;
+    margin: 0;
+}
+
+/* ================================================================
+   PRINT
+   ================================================================ */
+
+@page {
+    size: A4;
+    margin: 25mm 22mm 25mm 22mm;
+
+    @bottom-right {
+        content: counter(page);
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 9pt;
+        color: #555;
+    }
+}
+
+@media print {
+    body {
+        max-width: none;
+        margin: 0;
+    }
+
+    /* Each H1 after the first starts on a new page (schedules etc.).
+       The first H1 — the document title — must NOT page-break. */
+    h1 {
+        page-break-before: always;
+        break-before: page;
+    }
+    h1.doc-title {
+        page-break-before: avoid;
+        break-before: avoid;
+    }
+
+    /* Avoid orphaned section titles.
+       Only h2 (always a short title like "7. DIVIDENDS") benefits from this;
+       h3/h4/h5 routinely hold full clause text that must be allowed to break
+       across pages — applying break-after to them creates cascading avoidance
+       chains that produce large blank gaps when a clause spans a page. */
+    h2 {
+        page-break-after: avoid;
+        break-after: avoid;
+    }
+
+    /* Keep the TOC on the same page as the document title, and together internally */
+    nav#toc {
+        page-break-before: avoid;
+        break-before: avoid;
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
 }

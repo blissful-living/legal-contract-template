@@ -1,9 +1,6 @@
 project:
   type: default
 
-metadata-files: 
-  - _variables.yml
-
 format:
   html:
     css: style.css
@@ -15,6 +12,7 @@ format:
     crossrefs-hover: false
     theme: none
     minimal: true
+    toc-title: "TABLE OF CONTENTS"
 
 crossref:
   sec-prefix: ""
