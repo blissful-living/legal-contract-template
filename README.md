@@ -6,7 +6,7 @@ Built on [Quarto](https://quarto.org), with a custom Pandoc Lua filter that appl
 
 ## Preview
 
-![Rendered output](example.png)
+![Rendered output](examples/example.png)
 
 ## Features
 
@@ -38,13 +38,20 @@ brew install quarto
 ```
 .
 ├── _quarto.yml          # Quarto project configuration
-├── agreement.qmd        # Simple example document (two parties, no schedules)
-├── caveat.woff2         # Handwriting font used for auto-sign signatures
 ├── compile.sh           # Build script: link cross-refs + quarto render
-├── legal-numbering.lua  # Pandoc Lua filter for legal section numbering
-├── link-refs.py         # Cross-reference linker (called by compile.sh)
-├── style.css            # Print-oriented stylesheet
-└── md2qmd.md            # AI instruction file for converting .md contracts to .qmd
+├── assets/
+│   ├── caveat.woff2         # Handwriting font used for auto-sign signatures
+│   ├── legal-numbering.lua  # Pandoc Lua filter for legal section numbering
+│   └── style.css            # Print-oriented stylesheet
+├── examples/
+│   ├── agreement.html       # Rendered example output
+│   ├── agreement.qmd        # Simple example document (two parties, no schedules)
+│   └── example.png          # Screenshot of rendered output
+├── prompts/
+│   └── md2qmd.md            # AI instruction file for converting .md contracts to .qmd
+└── scripts/
+    ├── link-refs.py         # Cross-reference linker (called by compile.sh)
+    └── verify-counts.py     # Post-conversion completeness checker
 ```
 
 ## Document front matter
@@ -88,7 +95,7 @@ This Agreement is entered into as of {{< meta date >}} between
 Use `compile.sh` to link cross-references and render in one step:
 
 ```bash
-./compile.sh agreement.qmd
+./compile.sh examples/agreement.qmd
 ```
 
 This produces `agreement.html` — a self-contained file that can be opened in any browser, emailed, or printed. Pass `-o other-name.html` to override the output path.
@@ -100,7 +107,7 @@ This produces `agreement.html` — a self-contained file that can be opened in a
 Pass `--pdf` to produce a PDF alongside the HTML in one step:
 
 ```bash
-./compile.sh agreement.qmd --pdf
+./compile.sh examples/agreement.qmd --pdf
 ```
 
 This renders `agreement.html` as usual and then converts it to `agreement.pdf` using headless Chrome. The PDF is rendered by the same engine as Chrome's *Print → Save as PDF*, so the output is identical to what you see in the print preview.
@@ -108,8 +115,8 @@ This renders `agreement.html` as usual and then converts it to `agreement.pdf` u
 `--pdf` can be combined with `-o`:
 
 ```bash
-./compile.sh agreement.qmd -o dist/agreement.html --pdf
-# produces dist/agreement.html and dist/agreement.pdf
+./compile.sh examples/agreement.qmd -o examples/agreement.html --pdf
+# produces examples/agreement.html and examples/agreement.pdf
 ```
 
 **Chrome detection** — the script tries the following in order and uses the first match:
@@ -122,12 +129,12 @@ This renders `agreement.html` as usual and then converts it to `agreement.pdf` u
 To use a different binary, set the `CHROME` environment variable:
 
 ```bash
-CHROME=/usr/bin/chromium-browser ./compile.sh agreement.qmd --pdf
+CHROME=/usr/bin/chromium-browser ./compile.sh examples/agreement.qmd --pdf
 ```
 
 ## Adding a new document
 
-1. Copy `agreement.qmd` to a new file, e.g. `nda.qmd`.
+1. Copy `examples/agreement.qmd` to a new file, e.g. `nda.qmd`.
 2. Update the `title`, `date`, `parties`, and `execution` fields in the YAML front matter.
 3. Write the document body using standard Markdown headings (`#`, `##`, `###`, `####`, `#####`).
 4. IDs are assigned automatically by the Lua filter — no manual `{#sec-*}` markup needed. Optionally add a friendly ID to any heading you want stable cross-references to: `## Payment Terms {#sec-payment}` (see [Cross-references](#cross-references) below).
@@ -249,10 +256,10 @@ toc-max-depth: 3
 
 ```bash
 # Include headings up to ### in the TOC
-quarto render agreement.qmd -M toc-max-depth:3
+quarto render examples/agreement.qmd -M toc-max-depth:3
 
 # Suppress the TOC entirely
-quarto render agreement.qmd -M toc-max-depth:0
+quarto render examples/agreement.qmd -M toc-max-depth:0
 ```
 
 ### TOC heading
@@ -357,7 +364,7 @@ The note is informational: the links work and point to the right clauses. What's
 - **Accept the fix automatically** — run the compile script with `--fix-refs` to rewrite the display text in the `.qmd` directly:
 
 ```bash
-./compile.sh --fix-refs agreement.qmd
+./compile.sh --fix-refs examples/agreement.qmd
 ```
 
 This changes `[4c](#sec-…-4-3)` to `[4.3](#sec-…-4-3)` in place. The flag can be passed on any subsequent compile run; if there are no stale references, it has no effect.
@@ -376,7 +383,7 @@ This changes `[4c](#sec-…-4-3)` to `[4.3](#sec-…-4-3)` in place. The flag ca
 To convert a document, open a Claude Code session and send this message — substituting your actual source file path. The output filename is derived automatically (same name, `.qmd` extension):
 
 ```
-Read md2qmd.md and follow its protocol exactly.
+Read prompts/md2qmd.md and follow its protocol exactly.
 
 Source file: your-contract.md
 

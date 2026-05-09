@@ -91,7 +91,7 @@ done
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "→ Linking cross-references in $input"
-python3 "$script_dir/link-refs.py" $fix_refs "$input"
+python3 "$script_dir/scripts/link-refs.py" $fix_refs "$input"
 
 echo "→ Rendering $input"
 if [[ -n "$output" ]]; then

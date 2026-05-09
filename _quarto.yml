@@ -3,9 +3,9 @@ project:
 
 format:
   html:
-    css: style.css
+    css: assets/style.css
     filters:
-      - legal-numbering.lua
+      - assets/legal-numbering.lua
     embed-resources: true
     format-links: false
     number-sections: false

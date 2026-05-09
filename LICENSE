@@ -168,6 +168,16 @@
 
    END OF TERMS AND CONDITIONS
 
+   ---
+
+   Third-party components
+   ----------------------
+   The Caveat font (assets/caveat.woff2) is not covered by the Apache License
+   above. It is distributed under the SIL Open Font License, Version 1.1.
+   See assets/OFL.txt for the full license text and copyright notice.
+
+   ---
+
    Copyright 2026 Blissful Living Foundation (https://labs.blissful.im)
 
    Licensed under the Apache License, Version 2.0 (the "License");
