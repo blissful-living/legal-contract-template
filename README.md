@@ -118,6 +118,7 @@ Review the generated `.qmd` file, adjust the front matter (parties, dates, signa
 - Execution/signature block auto-generated from YAML, with optional handwriting-style auto-signature
 - Supports any number of signatories; B2B, B2P, and P2P layouts determined automatically
 - Self-contained HTML output (a single file with no external dependencies)
+- Configurable hyperlink colour (defaults to body text colour)
 - One-command PDF export via headless Chrome (`--pdf` flag)
 - Print-ready styling (Arial, 11pt, 800 px body width)
 
@@ -313,6 +314,21 @@ toc-title: "TABLE OF CONTENTS"
 
 This is also set project-wide in `_quarto.yml` and can be overridden per document.
 
+### Link Colour
+
+By default, hyperlinks (cross-references, TOC entries, and any inline links) use the body text colour (`black`). Set `link-color` in the document's front matter to override:
+
+```yaml
+---
+title: "My Agreement"
+link-color: "#0000EE"   # browser-standard blue
+---
+```
+
+Any valid CSS colour value is accepted — named colours (`navy`, `darkblue`), hex codes, or `rgb(…)` / `hsl(…)` notation. The override applies uniformly to all links in the document, including TOC entries.
+
+To revert to the default, remove the key or leave it commented out (as shown in the example document).
+
 ### Execution Block
 
 The execution (signature) section is auto-generated from the `execution` key in the front matter. If the key is absent or `signatories` is empty, no section is appended.
@@ -437,6 +453,17 @@ This renders `agreement.html` as usual and then converts it to `agreement.pdf` u
 ./compile.sh examples/agreement.qmd -o examples/agreement.html --pdf
 # produces examples/agreement.html and examples/agreement.pdf
 ```
+
+#### Overwrite protection
+
+By default, `compile.sh` checks whether the output file(s) already exist and prompts for confirmation before overwriting. Pass `--force` (or `-f`) to skip the prompt:
+
+```bash
+./compile.sh examples/agreement.qmd --force
+./compile.sh examples/agreement.qmd --pdf -f
+```
+
+The check covers both the HTML and PDF outputs. In non-interactive contexts (piped input, CI), the script aborts rather than silently overwriting — use `--force` to allow it.
 
 **Chrome detection** — the script tries the following in order and uses the first match:
 

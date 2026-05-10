@@ -2,7 +2,7 @@
 # compile.sh — link cross-references and render a .qmd to HTML (and optionally PDF).
 #
 # Usage:
-#   ./compile.sh <file.qmd> [-o output.html] [--fix-refs] [--pdf]
+#   ./compile.sh <file.qmd> [-o output.html] [--fix-refs] [--pdf] [--force]
 #
 # Steps:
 #   1. python3 link-refs.py <file.qmd>   — rewrite plain-text cross-refs
@@ -15,11 +15,12 @@
 #              document's positional numbering (e.g. "4c" → "4.3").
 # --pdf        Convert the rendered HTML to PDF using headless Chrome.
 #              Set CHROME=/path/to/binary to override auto-detection.
+# --force / -f Overwrite existing output files without prompting.
 
 set -euo pipefail
 
 usage() {
-    echo "Usage: $0 <file.qmd> [-o output.html] [--fix-refs] [--pdf]" >&2
+    echo "Usage: $0 <file.qmd> [-o output.html] [--fix-refs] [--pdf] [--force]" >&2
     exit 2
 }
 
@@ -54,6 +55,7 @@ input=""
 output=""
 fix_refs=""
 make_pdf=""
+force=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -68,6 +70,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --pdf)
             make_pdf=1
+            shift
+            ;;
+        --force|-f)
+            force=1
             shift
             ;;
         -h|--help)
@@ -90,18 +96,69 @@ done
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Resolve output paths now so we can check for existing files before doing work.
+html_path="${output:-${input%.qmd}.html}"
+pdf_path="${html_path%.html}.pdf"
+
+existing=()
+[[ -f "$html_path" ]] && existing+=("$html_path")
+[[ -n "$make_pdf" && -f "$pdf_path" ]] && existing+=("$pdf_path")
+
+if [[ ${#existing[@]} -gt 0 && -z "$force" ]]; then
+    echo "The following output file(s) already exist:" >&2
+    for f in "${existing[@]}"; do echo "  $f" >&2; done
+    if [[ -t 0 ]]; then
+        printf "Overwrite? [y/N] " >&2
+        read -r _reply
+        [[ "$_reply" =~ ^[Yy]$ ]] || { echo "Aborted." >&2; exit 1; }
+    else
+        echo "Aborted (non-interactive; use --force to overwrite)." >&2
+        exit 1
+    fi
+fi
+
 echo "→ Linking cross-references in $input"
 python3 "$script_dir/scripts/link-refs.py" $fix_refs "$input"
 
 echo "→ Rendering $input"
+
+# Quarto discovers _quarto.yml by walking up from the input file's directory,
+# not the CWD.  Files outside this repo never find _quarto.yml, so project
+# settings (CSS, Lua filter, theme: none) aren't applied.  Mirror them here
+# with absolute paths via --metadata-file.
+_tmp_meta=$(mktemp /tmp/quarto-meta-XXXXX.yml)
+trap 'rm -f "$_tmp_meta"' EXIT
+
+cat > "$_tmp_meta" <<EOF
+css: "${script_dir}/assets/style.css"
+embed-resources: true
+theme: none
+minimal: true
+format-links: false
+number-sections: false
+crossrefs-hover: false
+toc-title: "TABLE OF CONTENTS"
+filters:
+  - "${script_dir}/assets/legal-numbering.lua"
+crossref:
+  sec-prefix: ""
+  chapters: false
+EOF
+
 if [[ -n "$output" ]]; then
-    quarto render "$input" --output "$output"
+    quarto render "$input" --output "$output" --metadata-file "$_tmp_meta"
 else
-    quarto render "$input"
+    quarto render "$input" --metadata-file "$_tmp_meta"
 fi
 
-# Resolve the HTML output path (Quarto default: same name as input, .html extension).
-html_path="${output:-${input%.qmd}.html}"
+# Quarto resolves {{< meta >}} shortcodes after Lua filters run, so TOC entries
+# built by the filter may have empty placeholders where shortcode values belong.
+# Rebuild TOC labels from the already-rendered heading text to correct this.
+python3 "$script_dir/scripts/fix-toc.py" "$html_path"
+
+# Clean up any _files/ dir Quarto may still produce.
+files_dir="${html_path%.html}_files"
+[[ -d "$files_dir" ]] && rm -rf "$files_dir"
 
 if [[ -n "$make_pdf" ]]; then
     chrome_bin=$(find_chrome) || {
@@ -109,8 +166,6 @@ if [[ -n "$make_pdf" ]]; then
              "Install Chrome or set CHROME=/path/to/binary." >&2
         exit 1
     }
-
-    pdf_path="${html_path%.html}.pdf"
 
     # --print-to-pdf requires an absolute path in some Chrome versions.
     abs_html="$(cd "$(dirname "$html_path")" && pwd)/$(basename "$html_path")"

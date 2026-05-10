@@ -79,15 +79,38 @@ local function parse_toc_depth(meta)
   return tonumber(str) or 2
 end
 
+-- Like pandoc.utils.stringify but also captures RawInline content.
+-- pandoc.utils.stringify silently drops RawInline nodes; Quarto represents
+-- {{< meta >}} shortcode output as RawInline "html", so those values would
+-- otherwise vanish from TOC labels even though they render fine in the body.
+local function stringify_with_raw(inlines)
+  local parts = {}
+  for _, el in ipairs(inlines) do
+    if     el.t == "Str"       then parts[#parts+1] = el.text
+    elseif el.t == "Space"
+        or el.t == "SoftBreak" then parts[#parts+1] = " "
+    elseif el.t == "LineBreak" then parts[#parts+1] = "\n"
+    elseif el.t == "Code"      then parts[#parts+1] = el.text
+    elseif el.t == "RawInline" then
+      -- Strip any HTML tags; keep only the text content (e.g. "85%").
+      parts[#parts+1] = el.text:gsub("<[^>]*>", "")
+    elseif el.content          then
+      -- Handles Strong, Emph, Span, Link, etc. by recursing into content.
+      parts[#parts+1] = stringify_with_raw(el.content)
+    end
+  end
+  return table.concat(parts)
+end
+
 -- Extract the TOC label from a heading's inline content.
 -- When a heading starts with a Strong (bold) inline — Variant C clauses like
 -- "**Committees**: A committee of directors must…" — use only the bold text so
 -- the TOC entry reads "Committees" rather than the full clause sentence.
 local function toc_label(inlines)
   if inlines[1] and inlines[1].t == "Strong" then
-    return pandoc.utils.stringify(inlines[1].content)
+    return stringify_with_raw(inlines[1].content)
   end
-  return pandoc.utils.stringify(inlines)
+  return stringify_with_raw(inlines)
 end
 
 -- Render collected TOC entries as an HTML <nav> block.
@@ -405,6 +428,21 @@ function Pandoc(doc)
   local exec_html = build_execution_html(doc.meta)
   if exec_html then
     result.blocks[#result.blocks + 1] = pandoc.RawBlock("html", exec_html)
+  end
+
+  -- Inject link-color override into <head> if the metadata key is set.
+  -- Without it, links inherit the body text colour (black) from style.css.
+  local link_color_val = result.meta["link-color"]
+  if link_color_val then
+    local color = html_escape(pandoc.utils.stringify(link_color_val))
+    local css = string.format('<style>a, a.quarto-xref { color: %s !important; }</style>', color)
+    local include = pandoc.MetaBlocks({pandoc.RawBlock("html", css)})
+    local hi = result.meta["header-includes"]
+    if hi and hi.t == "MetaList" then
+      hi[#hi + 1] = include
+    else
+      result.meta["header-includes"] = pandoc.MetaList({include})
+    end
   end
 
   -- Title block suppression: the first H1 in the document body is the canonical

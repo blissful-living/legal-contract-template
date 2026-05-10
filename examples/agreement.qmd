@@ -1,6 +1,7 @@
 ---
 title: "General Business Agreement"
 toc-max-depth: 2
+# link-color: "#0000EE"
 parties:
   person_1: "Alice Smith"
   person_2: "Bob Jones"
