@@ -2,7 +2,7 @@
 # compile.sh — link cross-references and render a .qmd to HTML (and optionally PDF).
 #
 # Usage:
-#   ./compile.sh <file.qmd> [-o output.html] [--fix-refs] [--pdf] [--force]
+#   ./compile.sh <file.qmd> [-o path/to/output.html] [--fix-refs] [--pdf] [--force]
 #
 # Steps:
 #   1. python3 link-refs.py <file.qmd>   — rewrite plain-text cross-refs
@@ -11,6 +11,8 @@
 #
 # The linker is idempotent, so re-running compile.sh on the same file is safe.
 #
+# -o accepts a full path (directory + filename). The directory is created if it
+#    does not exist. PDF output (--pdf) is placed alongside the HTML output.
 # --fix-refs   Rewrite stale letter-suffix link display text to match the
 #              document's positional numbering (e.g. "4c" → "4.3").
 # --pdf        Convert the rendered HTML to PDF using headless Chrome.
@@ -20,7 +22,7 @@
 set -euo pipefail
 
 usage() {
-    echo "Usage: $0 <file.qmd> [-o output.html] [--fix-refs] [--pdf] [--force]" >&2
+    echo "Usage: $0 <file.qmd> [-o path/to/output.html] [--fix-refs] [--pdf] [--force]" >&2
     exit 2
 }
 
@@ -96,8 +98,15 @@ done
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Resolve output paths now so we can check for existing files before doing work.
-html_path="${output:-${input%.qmd}.html}"
+# Resolve output paths to absolute paths so they are correct regardless of
+# whether quarto or Chrome are invoked from a different working directory.
+# -o may be a full path; the destination directory is created if needed.
+if [[ -n "$output" ]]; then
+    mkdir -p "$(dirname "$output")"
+    html_path="$(cd "$(dirname "$output")" && pwd)/$(basename "$output")"
+else
+    html_path="$(cd "$(dirname "${input%.qmd}.html")" && pwd)/$(basename "${input%.qmd}.html")"
+fi
 pdf_path="${html_path%.html}.pdf"
 
 existing=()
@@ -145,11 +154,13 @@ crossref:
   chapters: false
 EOF
 
-if [[ -n "$output" ]]; then
-    quarto render "$input" --output "$output" --metadata-file "$_tmp_meta"
-else
-    quarto render "$input" --metadata-file "$_tmp_meta"
-fi
+# quarto --output rejects paths; render to the default location next to the
+# source, then move to the requested destination if -o specified a different path.
+quarto_html="$(cd "$(dirname "$input")" && pwd)/$(basename "${input%.qmd}").html"
+
+quarto render "$input" --metadata-file "$_tmp_meta"
+
+[[ "$quarto_html" != "$html_path" ]] && mv "$quarto_html" "$html_path"
 
 # Quarto resolves {{< meta >}} shortcodes after Lua filters run, so TOC entries
 # built by the filter may have empty placeholders where shortcode values belong.
