@@ -409,6 +409,22 @@ function Pandoc(doc)
     end,
   })
 
+  -- Tag intro paragraphs: a Para that sits directly between an H3 and an H4
+  -- is the lead-in sentence for the lettered items below it.  Wrap it in a
+  -- <div class="intro-para"> so CSS can indent it to align with the (a)/(b)/(c)
+  -- label column without affecting other paragraphs that follow an H3.
+  local blocks = result.blocks
+  for i = 2, #blocks - 1 do
+    local prev = blocks[i - 1]
+    local curr = blocks[i]
+    local next = blocks[i + 1]
+    if curr.t == "Para"
+    and prev.t == "Header" and prev.level == 3
+    and next.t == "Header" and next.level == 4 then
+      blocks[i] = pandoc.Div({curr}, pandoc.Attr("", {"intro-para"}, {}))
+    end
+  end
+
   -- Insert TOC immediately after the first H1 (document title) so the title
   -- appears above the TOC, not below it.  Fall back to position 1 if no H1 exists.
   if toc_depth > 0 and #toc_entries > 0 then

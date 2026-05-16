@@ -65,6 +65,10 @@ h4 { margin-left: 3.5em; padding-left: 2.5em; }
 /* H5 = (i)/(ii)/(iii) items (was H4) */
 h5 { margin-left: 6.0em; padding-left: 3.0em; }
 
+/* Intro paragraph: lead-in sentence that precedes (a)/(b)/(c) items under a sub-clause.
+   Indented to align with the (a)/(b)/(c) label column (matches H4 margin-left). */
+div.intro-para { margin-left: 3.5em; }
+
 .header-section-number {
     font-weight: bold !important;
     position: absolute;

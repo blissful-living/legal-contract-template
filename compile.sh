@@ -132,13 +132,35 @@ python3 "$script_dir/scripts/link-refs.py" $fix_refs "$input"
 echo "→ Rendering $input"
 
 # Quarto discovers _quarto.yml by walking up from the input file's directory,
-# not the CWD.  Files outside this repo never find _quarto.yml, so project
-# settings (CSS, Lua filter, theme: none) aren't applied.  Mirror them here
-# with absolute paths via --metadata-file.
-_tmp_meta=$(mktemp /tmp/quarto-meta-XXXXX.yml)
-trap 'rm -f "$_tmp_meta"' EXIT
+# not the CWD.  When the input file lives inside this repo, _quarto.yml is
+# found automatically and supplies the project settings (CSS, Lua filter,
+# theme: none).  When it lives outside, those settings must be mirrored via
+# --metadata-file using absolute paths.
+#
+# Do NOT pass --metadata-file when _quarto.yml is already discoverable:
+# Quarto merges metadata sources additively, so duplicating `filters:` or
+# `css:` makes the Lua filter run twice and the CSS get embedded twice
+# (producing doubled section numbers and two TOC blocks).
+in_project=""
+search_dir="$(cd "$(dirname "$input")" && pwd)"
+while [[ -n "$search_dir" && "$search_dir" != "/" ]]; do
+    if [[ -f "$search_dir/_quarto.yml" ]]; then
+        in_project=1
+        break
+    fi
+    search_dir="$(dirname "$search_dir")"
+done
 
-cat > "$_tmp_meta" <<EOF
+# quarto --output rejects paths; render to the default location next to the
+# source, then move to the requested destination if -o specified a different path.
+quarto_html="$(cd "$(dirname "$input")" && pwd)/$(basename "${input%.qmd}").html"
+
+if [[ -n "$in_project" ]]; then
+    quarto render "$input"
+else
+    _tmp_meta=$(mktemp /tmp/quarto-meta-XXXXX.yml)
+    trap 'rm -f "$_tmp_meta"' EXIT
+    cat > "$_tmp_meta" <<EOF
 css: "${script_dir}/assets/style.css"
 embed-resources: true
 theme: none
@@ -153,12 +175,8 @@ crossref:
   sec-prefix: ""
   chapters: false
 EOF
-
-# quarto --output rejects paths; render to the default location next to the
-# source, then move to the requested destination if -o specified a different path.
-quarto_html="$(cd "$(dirname "$input")" && pwd)/$(basename "${input%.qmd}").html"
-
-quarto render "$input" --metadata-file "$_tmp_meta"
+    quarto render "$input" --metadata-file "$_tmp_meta"
+fi
 
 [[ "$quarto_html" != "$html_path" ]] && mv "$quarto_html" "$html_path"
 
