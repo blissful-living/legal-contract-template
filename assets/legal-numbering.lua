@@ -143,11 +143,16 @@ end
 --   execution:
 --     title: "EXECUTION"                    # optional; default "EXECUTION"
 --     intro: "Signed as an Agreement..."    # optional preamble sentence
+--     agreement-date: "21 May 2026"         # optional; used as the default date
+--                                           # for any signatory without their own
+--                                           # `date`. Long-form or ISO 8601.
 --     signatories:
 --       - name: "Alice Smith"
 --         organisation: "Smith & Co Ltd"    # omit for personal (non-org) signatories
 --         role: "Director"                  # omit for personal signatories
---         date: "2026-04-26"               # ISO 8601 dates are reformatted to long form
+--         date: "2026-04-26"               # optional; ISO 8601 dates are reformatted
+--                                          # to long form. Omit to fall back to
+--                                          # execution.agreement-date.
 --         auto-sign: true                   # render name in handwriting font
 --
 -- B2B vs personal detection: presence of `organisation` (and optionally
@@ -187,6 +192,8 @@ local function build_execution_html(meta)
 
   local title = exec.title and pandoc.utils.stringify(exec.title) or "EXECUTION"
   local intro = exec.intro and pandoc.utils.stringify(exec.intro) or nil
+  local default_date = exec['agreement-date']
+                       and pandoc.utils.stringify(exec['agreement-date']) or nil
 
   local out = {
     '<section id="execution">',
@@ -201,7 +208,7 @@ local function build_execution_html(meta)
     local name     = sig.name         and pandoc.utils.stringify(sig.name)         or ""
     local org      = sig.organisation and pandoc.utils.stringify(sig.organisation) or nil
     local role     = sig.role         and pandoc.utils.stringify(sig.role)         or nil
-    local date_raw = sig.date         and pandoc.utils.stringify(sig.date)         or nil
+    local date_raw = (sig.date and pandoc.utils.stringify(sig.date)) or default_date
     local date_str = date_raw and format_date(date_raw) or nil
     local auto     = meta_bool(sig['auto-sign'])
 
@@ -423,6 +430,22 @@ function Pandoc(doc)
     and next.t == "Header" and next.level == 4 then
       blocks[i] = pandoc.Div({curr}, pandoc.Attr("", {"intro-para"}, {}))
     end
+  end
+
+  -- If an execution block will be appended, give it a TOC entry so the
+  -- signature section is reachable from the table of contents.
+  if toc_depth >= 1
+     and doc.meta.execution
+     and doc.meta.execution.signatories
+     and #doc.meta.execution.signatories > 0 then
+    local exec_title = doc.meta.execution.title
+      and pandoc.utils.stringify(doc.meta.execution.title) or "EXECUTION"
+    table.insert(toc_entries, {
+      level   = 1,
+      id      = "sec-execution",
+      display = "",
+      text    = exec_title,
+    })
   end
 
   -- Insert TOC immediately after the first H1 (document title) so the title

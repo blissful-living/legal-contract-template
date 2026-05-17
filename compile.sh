@@ -151,12 +151,28 @@ while [[ -n "$search_dir" && "$search_dir" != "/" ]]; do
     search_dir="$(dirname "$search_dir")"
 done
 
+# Auto-detect a `parameters.yaml` (or `.yml`) sibling of the input file and
+# pass it as --metadata-file so engagement-specific variables (parties, sow,
+# execution) can live outside the template's frontmatter.
+input_dir="$(cd "$(dirname "$input")" && pwd)"
+params_file=""
+for candidate in "$input_dir/parameters.yaml" "$input_dir/parameters.yml"; do
+    if [[ -f "$candidate" ]]; then
+        params_file="$candidate"
+        echo "→ Loading parameters from $params_file"
+        break
+    fi
+done
+
 # quarto --output rejects paths; render to the default location next to the
 # source, then move to the requested destination if -o specified a different path.
 quarto_html="$(cd "$(dirname "$input")" && pwd)/$(basename "${input%.qmd}").html"
 
+quarto_args=("$input")
+[[ -n "$params_file" ]] && quarto_args+=(--metadata-file "$params_file")
+
 if [[ -n "$in_project" ]]; then
-    quarto render "$input"
+    quarto render "${quarto_args[@]}"
 else
     _tmp_meta=$(mktemp /tmp/quarto-meta-XXXXX.yml)
     trap 'rm -f "$_tmp_meta"' EXIT
@@ -175,7 +191,7 @@ crossref:
   sec-prefix: ""
   chapters: false
 EOF
-    quarto render "$input" --metadata-file "$_tmp_meta"
+    quarto render "${quarto_args[@]}" --metadata-file "$_tmp_meta"
 fi
 
 [[ "$quarto_html" != "$html_path" ]] && mv "$quarto_html" "$html_path"

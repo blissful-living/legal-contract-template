@@ -114,7 +114,8 @@ Review the generated `.qmd` file, adjust the front matter (parties, dates, signa
 - Auto-generated table of contents (configurable depth, off by default at depth 0)
 - Auto-generated heading IDs (no manual `{#sec-*}` markup needed; add friendly names only where you want stable references)
 - Multi-part documents and schedules (`#` headings reset all numbering for each part)
-- All document variables (parties, dates, signatories) defined in the QMD front matter (no separate config file)
+- Document variables (parties, dates, signatories) defined in the QMD front matter, with optional split into a sibling `parameters.yaml` for template reuse across many instances (see [Template Reuse](#template-reuse))
+- Multi-file documents via Quarto's `{{< include >}}` shortcode — keep a generic contract scaffold in one file and per-instance prose (scope, schedules) in another
 - Execution/signature block auto-generated from YAML, with optional handwriting-style auto-signature
 - Supports any number of signatories; B2B, B2P, and P2P layouts determined automatically
 - Self-contained HTML output (a single file with no external dependencies)
@@ -146,7 +147,7 @@ Review the generated `.qmd` file, adjust the front matter (parties, dates, signa
 
 ### Document Front Matter
 
-All document-level configuration lives in the YAML front matter of the `.qmd` file. There is no separate variables file.
+Document-level configuration lives in the YAML front matter of the `.qmd` file. For reusable templates, per-document values can optionally be split into a sibling `parameters.yaml` — see [Template Reuse](#template-reuse).
 
 ```yaml
 ---
@@ -179,6 +180,83 @@ The values can be referenced anywhere in the document body with `{{< meta key >}
 This Agreement is entered into as of {{< meta date >}} between
 **{{< meta parties.person_1 >}}** and **{{< meta parties.person_2 >}}**.
 ```
+
+### Template Reuse
+
+For documents you expect to instantiate many times (services agreements, NDAs, retainer letters across multiple engagements), the qmd can be kept as a generic template, with per-instance values and bespoke sections in sibling files.
+
+#### External Parameters File
+
+Per-document variables (parties, dates, fees, signatories) can be moved out of the qmd frontmatter into a sibling `parameters.yaml`. `compile.sh` auto-detects `parameters.yaml` (or `parameters.yml`) next to the input file and passes it to Quarto as a metadata source.
+
+```yaml
+# parameters.yaml — no `---` fences
+parties:
+  provider:
+    name: "Acme Consulting Limited"
+    address: "1 Innovation Way, Wellington 6011, New Zealand"
+  client:
+    name: "Globex Corporation"
+    address: "200 Market Street, Auckland 1010, New Zealand"
+
+execution:
+  agreement-date: "1 March 2026"
+  signatories:
+    - name: "Alice Smith"
+      organisation: "Acme Consulting Limited"
+      role: "Director"
+      auto-sign: true
+    - name: "Bob Jones"
+      organisation: "Globex Corporation"
+      role: "Chief Executive Officer"
+      auto-sign: false
+```
+
+The template's qmd frontmatter then keeps only document-level keys:
+
+```yaml
+---
+title: "Master Services Agreement"
+toc-max-depth: 2
+---
+```
+
+**Precedence**: when a key is defined in *both* the qmd frontmatter and `parameters.yaml`, the **qmd frontmatter wins**. This follows Pandoc's standard rule (document metadata overrides `--metadata-file` sources) and gives you a deliberate override hook — put shared defaults in `parameters.yaml`, override per-document from the qmd when needed.
+
+**When `parameters.yaml` is absent**: `compile.sh` behaves as before. All variables must then live in the qmd frontmatter. The two patterns are interchangeable — start with everything in the qmd, extract `parameters.yaml` once template reuse becomes worthwhile.
+
+#### Including External Files
+
+Quarto's `{{< include >}}` shortcode inlines another file at the include point, before Lua filters run. This is useful for keeping a generic contract scaffold separate from per-instance prose (e.g., a Scope of Services schedule that changes per engagement):
+
+```markdown
+# Schedule 2: Scope of Services {#sec-scope}
+
+{{< include scope.qmd >}}
+```
+
+The path is resolved relative to the parent qmd's directory. The included file is a body fragment — no YAML frontmatter, just headings and paragraphs. Heading levels continue the parent's hierarchy: use `##`, `###`, etc., as if the content were written inline.
+
+Cross-references (`@sec-…`), TOC entries, and section numbering all work transparently across the file boundary, since the include happens before any Lua processing.
+
+#### Putting It Together
+
+A common template-reuse layout combines both mechanisms — a single template lives once, each engagement is a folder with its own parameters and scope:
+
+```
+master-services-agreement/
+├── msa.qmd                # template — clauses, schedules, {{< include scope.qmd >}}
+├── parameters.yaml        # variables for this instance
+└── scope.qmd              # bespoke scope prose for this instance
+```
+
+Compile:
+
+```bash
+./compile.sh master-services-agreement/msa.qmd
+```
+
+For a second engagement, copy the folder, edit `parameters.yaml` and `scope.qmd`, leave `msa.qmd` untouched. The same template generates both contracts.
 
 ### Heading Levels
 
