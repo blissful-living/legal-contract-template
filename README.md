@@ -110,7 +110,7 @@ Review the generated `.qmd` file, adjust the front matter (parties, dates, signa
 ### Features
 
 - Legal-style hierarchical numbering: `1.` → `1.1` → `(a)` → `(i)`
-- Cross-references between clauses (e.g. *"as defined in clause 1.1"*)
+- Cross-references between clauses, with the referenced heading's title appended automatically (e.g. *"as defined in clause 1.1 (Purpose and Objectives)"*); opt-out per document via `ref-titles: false`
 - Auto-generated table of contents (configurable depth, off by default at depth 0)
 - Auto-generated heading IDs (no manual `{#sec-*}` markup needed; add friendly names only where you want stable references)
 - Multi-part documents and schedules (`#` headings reset all numbering for each part)
@@ -447,7 +447,7 @@ The Lua filter assigns a positional ID to every heading automatically. For examp
 See @sec-3-2 for the payment terms.
 ```
 
-The filter replaces `@sec-3-2` with a hyperlink such as *clause 3.2*.
+The filter replaces `@sec-3-2` with a hyperlink such as *clause 3.2 (Payment Terms)* — see [Reference Titles](#reference-titles) below for how the parenthetical title is sourced.
 
 #### Friendly IDs
 
@@ -460,11 +460,35 @@ You can also assign a human-readable ID to any heading:
 Both the friendly ID and the positional ID work as cross-reference targets:
 
 ```markdown
-See @sec-payment.   <!-- resolves to "clause 3.2", links to #sec-payment -->
+See @sec-payment.   <!-- resolves to "clause 3.2 (Payment Terms)", links to #sec-payment -->
 See @sec-3-2.       <!-- same result -->
 ```
 
-Friendly IDs are stable: if you insert a clause earlier in the document and `Payment Terms` moves from `3.2` to `4.1`, `@sec-payment` still resolves correctly and displays the updated number *clause 4.1*. Positional references like `@sec-3-2` would need to be updated manually.
+Friendly IDs are stable: if you insert a clause earlier in the document and `Payment Terms` moves from `3.2` to `4.1`, `@sec-payment` still resolves correctly and displays the updated number *clause 4.1 (Payment Terms)*. Positional references like `@sec-3-2` would need to be updated manually.
+
+#### Reference Titles
+
+By default, a cross-reference whose display text is just the clause number has the heading's title appended in parentheses. So *"governed by clause 1.1"* renders as *"governed by clause [1.1 (Purpose and Objectives)](#sec-purpose)"*, giving the reader an anchor without needing to follow the link.
+
+The title is derived from the referenced heading's content using three rules, applied in order:
+
+1. **Bold-prefixed headings** — when a heading starts with a bold span, the bold text is the title (a trailing `:` is stripped). This covers both `## **Title**` (bold-only) and `## **Title**: body…` (bold + colon + body). The `:` may sit inside or outside the bold span.
+2. **Plain-text headings ending in `.` `!` `?` `:` or `;`** — treated as body-as-heading clauses with no title. References to them render as the number only. Use this when the heading sentence *is* the clause:
+   ```markdown
+   ### This Agreement may be executed in any number of counterparts, including by electronic signature…
+   ```
+3. **Plain-text headings without terminal punctuation** — the entire heading text is the title (e.g. `## Purpose and Objectives` → title "Purpose and Objectives").
+
+Existing markdown links with custom display text (e.g. `[the payment terms](#sec-payment)`) are left alone — only links whose text matches the clause number are augmented.
+
+To disable title appending document-wide, set `ref-titles: false` in the YAML front matter:
+
+```yaml
+---
+title: "My Agreement"
+ref-titles: false
+---
+```
 
 #### Plain-text Cross-references — `link-refs.py`
 

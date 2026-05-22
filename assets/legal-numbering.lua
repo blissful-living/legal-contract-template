@@ -113,6 +113,66 @@ local function toc_label(inlines)
   return stringify_with_raw(inlines)
 end
 
+-- Extract a parenthetical title for cross-reference rendering.
+-- Returns a string title, or nil for body-as-heading clauses that have no title.
+--
+-- Rules, in order:
+--   1. First inline is Strong (Variants A and C) → title is the Strong's text
+--      with any trailing ":" stripped. Covers both "**Title**: body" and
+--      "**Title:** body" — and bold-only headings like "**Definitions**".
+--   2. Plain-text heading ending in sentence-final or list-intro punctuation
+--      (. ! ? : ;) → no title. The heading is a body clause.
+--   3. Plain-text heading ending in a list-item connector (", and", "; and",
+--      ", or", "; or") → no title. The heading is a sentence-fragment item
+--      in an enumerated list.
+--   4. Otherwise (plain text with no terminal punctuation) → the entire heading
+--      text is the title (Variant A without bold, e.g. "## Purpose and Objectives").
+local function extract_title(inlines)
+  if inlines[1] and inlines[1].t == "Strong" then
+    local t = stringify_with_raw(inlines[1].content)
+    return (t:gsub("[:%s]+$", ""))
+  end
+  local s = stringify_with_raw(inlines)
+  s = s:gsub("%s+$", "")
+  if s == "" then return nil end
+  if s:match("[,;]%s*[Aa]nd$") or s:match("[,;]%s*[Oo]r$") then
+    return nil
+  end
+  local last = s:sub(-1)
+  if last == "." or last == "!" or last == "?" or last == ":" or last == ";" then
+    return nil
+  end
+  return s
+end
+
+-- Classify a heading's structural shape for CSS styling.  Returned class is
+-- attached to the heading by Pass 2 so style.css can apply font-weight rules
+-- without baking heading level assumptions (e.g. "all H2s are titles").
+--
+-- One of three values is returned:
+--   "clause-title"  — Variant A. Heading is wholly a title (bold or plain
+--                     Title Case). Whole heading renders bold at H2 level.
+--   "clause-inline" — Variant C. Bold lead-in label followed by body text.
+--                     Only the bold span and the section number are bold;
+--                     the body text is regular weight.
+--   "clause-body"   — Body-as-heading. The heading is itself a sentence with
+--                     no title. Only the section number is bold.
+local function clause_shape(inlines)
+  if inlines[1] and inlines[1].t == "Strong" then
+    -- Variant A if nothing meaningful follows the Strong; Variant C otherwise.
+    for i = 2, #inlines do
+      local el = inlines[i]
+      if el.t ~= "Space" and el.t ~= "SoftBreak" then
+        return "clause-inline"
+      end
+    end
+    return "clause-title"
+  end
+  -- Plain text: reuse extract_title's classification (nil ⇒ body sentence).
+  if extract_title(inlines) then return "clause-title" end
+  return "clause-body"
+end
+
 -- Render collected TOC entries as an HTML <nav> block.
 -- Each entry: { level=N, id="...", display="1.", text="HEADING TEXT" }
 local function build_toc_html(entries, toc_title)
@@ -334,16 +394,17 @@ function Pandoc(doc)
       local has_friendly = el.identifier:match("^sec%-") ~= nil and el.identifier ~= pos_id
       local anchor = has_friendly and el.identifier or pos_id
 
-      id_map["#" .. pos_id] = {num = full, level = num_level, href = "#" .. anchor}
+      local title = extract_title(el.content)
+      id_map["#" .. pos_id] = {num = full, level = num_level, href = "#" .. anchor, title = title}
       if has_friendly then
-        id_map["#" .. el.identifier] = {num = full, level = num_level, href = "#" .. anchor}
+        id_map["#" .. el.identifier] = {num = full, level = num_level, href = "#" .. anchor, title = title}
       end
       -- Inside a schedule scope, also register the bare sec-N-M key so that
       -- author-written @sec-N-M Cite tokens (schedule-local refs) resolve correctly.
       if current_prefix ~= "sec" then
         local bare_id = "sec-" .. full:gsub("%.", "-")
         if not id_map["#" .. bare_id] then
-          id_map["#" .. bare_id] = {num = full, level = num_level, href = "#" .. anchor}
+          id_map["#" .. bare_id] = {num = full, level = num_level, href = "#" .. anchor, title = title}
         end
       end
 
@@ -394,6 +455,11 @@ function Pandoc(doc)
       if not has_friendly then
         el.identifier = pos_id
       end
+      -- Tag the heading with its structural shape so style.css can choose
+      -- font-weight per-clause rather than per-level.  Must run BEFORE the
+      -- section-number Span is inserted so clause_shape sees the original
+      -- author content.
+      table.insert(el.classes, clause_shape(el.content))
       table.insert(el.content, 1, pandoc.Span(display, {class = "header-section-number"}))
       return el
     end,
@@ -415,6 +481,44 @@ function Pandoc(doc)
       end
     end,
   })
+
+  -- Pass 3: append "(Title)" to cross-reference links whose display text is
+  -- just the clause number.  Controlled by the `ref-titles` metadata key
+  -- (default: true).  Set `ref-titles: false` in the YAML front matter to
+  -- restore number-only references.
+  --
+  -- Matches both:
+  --   - Markdown links emitted by link-refs.py:  [5.8](#sec-5-8)
+  --   - Links produced by the Cite handler above for @sec-* tokens.
+  --
+  -- An author-supplied display text (e.g. `[the payment terms](#sec-payment)`)
+  -- is left untouched because its content does not equal the target's number.
+  -- Headings whose extract_title() returned nil (body-as-heading clauses) are
+  -- also skipped, so number-only references survive where no title exists.
+  local ref_titles_meta = doc.meta["ref-titles"]
+  local ref_titles_on = true
+  if ref_titles_meta ~= nil then
+    if type(ref_titles_meta) == "boolean" then
+      ref_titles_on = ref_titles_meta
+    else
+      ref_titles_on = pandoc.utils.stringify(ref_titles_meta) ~= "false"
+    end
+  end
+
+  if ref_titles_on then
+    result = result:walk({
+      Link = function(el)
+        local target = id_map[el.target]
+        if not target or not target.title then return end
+        if pandoc.utils.stringify(el.content) == target.num then
+          table.insert(el.content, pandoc.Str(" ("))
+          table.insert(el.content, pandoc.Str(target.title))
+          table.insert(el.content, pandoc.Str(")"))
+          return el
+        end
+      end,
+    })
+  end
 
   -- Tag intro paragraphs: a Para that sits directly between an H3 and an H4
   -- is the lead-in sentence for the lettered items below it.  Wrap it in a

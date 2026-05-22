@@ -17,7 +17,14 @@ def strip_tags(s):
 
 
 def build_heading_map(html):
-    """Return {id: (section_num, body_text)} for every h1–h5 in the document."""
+    """Return {id: (section_num, body_text)} for every h1–h5 in the document.
+
+    Mirrors the Lua filter's `toc_label` rule: when a heading starts with a
+    <strong> span (Variant A or Variant C), use only the strong span's text as
+    the TOC label, so a clause like
+        ## **Title**: body text…
+    appears in the TOC as just "Title" rather than the full sentence.
+    """
     result = {}
     for m in re.finditer(
         r'<h[1-5][^>]*\bid="([^"]+)"[^>]*>(.*?)</h[1-5]>',
@@ -33,7 +40,12 @@ def build_heading_map(html):
             inner = inner[:sn_m.start()] + inner[sn_m.end():]
         else:
             sn = ''
-        result[hid] = (sn, strip_tags(inner).strip())
+        strong_m = re.match(r'\s*<strong>(.*?)</strong>', inner, re.DOTALL)
+        if strong_m:
+            body = strip_tags(strong_m.group(1)).strip()
+        else:
+            body = strip_tags(inner).strip()
+        result[hid] = (sn, body)
     return result
 
 

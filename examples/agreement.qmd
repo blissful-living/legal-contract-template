@@ -1,11 +1,11 @@
 ---
-title: "General Business Agreement"
+title: "Mutual Non-Disclosure Agreement"
 toc-max-depth: 2
 # link-color: "#0000EE"
 parties:
   person_1: "Alice Smith"
   person_2: "Bob Jones"
-  signed-date: "26 April 2026"
+  effective-date: "26 April 2026"
 execution:
   # title: "EXECUTION"
   # intro: "Executed by the undersigned."
@@ -22,36 +22,30 @@ execution:
       auto-sign: true
 ---
 
-# GENERAL BUSINESS AGREEMENT
+# MUTUAL NON-DISCLOSURE AGREEMENT
 
-## Scope of Collaboration {#sec-scope}
+## Purpose {#sec-purpose}
 
-The Parties agree to collaborate on business activities. The specific roles and responsibilities are governed by @sec-purpose and are subject to the financial obligations in @sec-contributions.
+The Parties wish to explore a potential business relationship and may exchange Confidential Information for that purpose.
 
-### Purpose and Objectives {#sec-purpose}
+## **Confidential Information**: any non-public information disclosed by one Party to the other that is identified as confidential or that a reasonable person would understand to be confidential. {#sec-confidential}
 
-#### The Parties intend to combine expertise to develop a new commercial venture focused on the research, development, and eventual global distribution of proprietary software solutions designed to optimise supply chain logistics for small to medium-sized enterprises. {#sec-venture}
+## Obligations {#sec-obligations}
 
-#### The specific roles shall be determined by mutual consent, as defined in @sec-venture, and shall include detailed project milestones that must be met within the first fiscal quarter to ensure the continued viability of the partnership.
+### **Permitted use**: Each Party may use the other Party's Confidential Information only for the purpose described in @sec-purpose.
 
-## Contributions {#sec-contributions}
+### **Permitted disclosures**
 
-Each party shall provide specific resources as outlined in @sec-contributions.
+A Party may disclose the other Party's Confidential Information to:
 
-### Financial and Intellectual Property
+#### its directors, employees, and professional advisers who need to know it for the purpose in @sec-purpose; and
 
-#### {{< meta parties.person_1 >}} shall provide the initial working capital required for operations, which includes but is not limited to funding for legal fees, marketing initiatives, and the procurement of necessary hardware for the primary development team located at the centralised office.
+#### any third party with the disclosing Party's prior written consent.
 
-#### {{< meta parties.person_2 >}} shall grant a non-exclusive licence for the use of existing proprietary algorithms and data structures which are essential for the foundational architecture of the proposed commercial venture. {#sec-licence}
+### Each Party must protect the other Party's Confidential Information using at least the same care it uses to protect its own confidential information.
 
-##### Such licence is limited to the term defined in @sec-term and shall only be utilised for purposes directly related to the collaborative project and not for any independent commercial gain outside of this specific agreement.
+## Term {#sec-term}
 
-##### The licence granted in @sec-licence is non-transferable and may not be sub-licensed to any third-party entities without the express written consent of the providing party.
+### This Agreement starts on {{< meta parties.effective-date >}} and continues for two (2) years.
 
-## Term and Termination {#sec-term}
-
-### Duration of Agreement
-
-#### This Agreement shall continue for twelve (12) months from {{< meta parties.signed-date >}}.
-
-#### Termination is subject to the notice periods defined in @sec-scope.
+### The obligations in @sec-obligations survive termination for a further three (3) years.

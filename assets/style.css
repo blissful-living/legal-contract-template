@@ -50,11 +50,21 @@ h1.doc-title {
 }
 
 /* H2 = numbered top-level section (was H1) */
-h2, h2 span {
+h2 {
     font-size: 11pt !important;
+    margin-top: 24pt;
+    margin-bottom: 8pt;
+    margin-left: 0;
+    padding-left: 2.5em;
+}
+
+/* H2 Variant A — heading is wholly a title.  Render the whole line bold so
+   it reads as a section header.  Variant C (clause-inline) and body-as-heading
+   (clause-body) H2s keep the universal normal weight, with only their inline
+   <strong> label (if any) and section number bold. */
+h2.clause-title, h2.clause-title span {
     font-weight: bold !important;
 }
-h2 { margin-top: 24pt; margin-bottom: 8pt; margin-left: 0; padding-left: 2.5em; }
 
 /* H3 = sub-clause heading (was H2) */
 h3 { margin-left: 0; padding-left: 3.5em; }
@@ -84,7 +94,7 @@ h4 .header-section-number { width: 2.5em; }
 h5 .header-section-number { width: 3.0em; }
 
 /* Preserve bold inline labels (e.g. **Bold label:**) within clause headings */
-h3 strong, h4 strong, h5 strong {
+h2 strong, h3 strong, h4 strong, h5 strong {
     font-weight: bold !important;
 }
 
