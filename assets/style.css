@@ -124,6 +124,14 @@ th, td {
     text-align: left;
 }
 
+/* Quarto wraps shortcode-resolved text (e.g. {{< meta … >}}) in a <p>; that
+   <p>'s default top margin pushes the content down inside its cell, so a
+   meta-driven cell sits lower than neighbours containing literal text and
+   the row's vertical-align: top looks broken. Strip the margins. */
+th > p, td > p {
+    margin: 0;
+}
+
 th {
     font-weight: bold !important;
     background-color: #f0f0f0;
