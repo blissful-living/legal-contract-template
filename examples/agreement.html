@@ -128,6 +128,10 @@ padding: 5pt 8pt;
 vertical-align: top;
 text-align: left;
 }
+
+th > p, td > p {
+margin: 0;
+}
 th {
 font-weight: bold !important;
 background-color: #f0f0f0;
@@ -185,8 +189,8 @@ grid-template-columns: 1fr;
 }
 }
 .signatory-behalf {
-margin-top: 0;
-margin-bottom: 20pt;
+margin-top: 32pt;
+margin-bottom: 8pt;
 line-height: 1.4;
 }
 .sig-field {
@@ -301,9 +305,9 @@ break-inside: avoid;
 <h3 class="clause-body" id="sec-4-2"><span class="header-section-number">4.2</span>The obligations in <a href="#sec-obligations">3 (Obligations)</a> survive termination for a further three (3) years.</h3>
 <section id="execution">
 <h1 id="sec-execution">EXECUTION</h1>
+<p class="signatory-behalf">For and on behalf of Smith &amp; Co Ltd by</p>
 <div class="execution-grid">
 <div class="signatory">
-<p class="signatory-behalf">For and on behalf of Smith &amp; Co Ltd by</p>
 <div class="sig-field">
 <p class="sig-handwriting">Alice Smith</p>
 <div class="sig-line"></div>
@@ -325,8 +329,10 @@ break-inside: avoid;
 <p class="sig-label">Date</p>
 </div>
 </div>
-<div class="signatory">
+</div>
 <p class="signatory-behalf">For and on behalf of Jones Enterprises Ltd by</p>
+<div class="execution-grid">
+<div class="signatory">
 <div class="sig-field">
 <p class="sig-handwriting">Bob Jones</p>
 <div class="sig-line"></div>

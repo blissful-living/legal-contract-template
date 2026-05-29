@@ -208,15 +208,25 @@ end
 --                                           # `date`. Long-form or ISO 8601.
 --     signatories:
 --       - name: "Alice Smith"
---         organisation: "Smith & Co Ltd"    # omit for personal (non-org) signatories
---         role: "Director"                  # omit for personal signatories
+--         organisation: "Smith & Co Ltd"    # omit for personal signatories;
+--                                           # presence triggers org grouping
+--         role: "Director"                  # optional; renders as Position field
 --         date: "2026-04-26"               # optional; ISO 8601 dates are reformatted
 --                                          # to long form. Omit to fall back to
 --                                          # execution.agreement-date.
 --         auto-sign: true                   # render name in handwriting font
+--         witness: true                     # optional; group as witness. Also
+--                                           # auto-detected when role begins with
+--                                           # the word "Witness".
 --
--- B2B vs personal detection: presence of `organisation` (and optionally
--- `role`) indicates the signatory acts for and on behalf of an entity.
+-- Signatories are grouped automatically:
+--   1. Personal parties (no organisation, not a witness) — rendered first
+--   2. Corporate signatories — one group per organisation, each prefaced by
+--      "For and on behalf of [Organisation] by" outside the signature grid
+--   3. Witnesses — rendered last in their own grid
+--
+-- Because each grid contains only one signatory type, all cells share the
+-- same field structure and horizontal alignment is preserved naturally.
 -- ================================================================
 
 local function html_escape(s)
@@ -243,6 +253,66 @@ local function meta_bool(val)
   return pandoc.utils.stringify(val) == "true"
 end
 
+-- Render a single signatory block (no "on behalf of" text — handled at group level).
+local function render_signatory(sig, default_date)
+  local name     = sig.name         and pandoc.utils.stringify(sig.name)         or ""
+  local role     = sig.role         and pandoc.utils.stringify(sig.role)         or nil
+  local date_raw = (sig.date and pandoc.utils.stringify(sig.date)) or default_date
+  local date_str = date_raw and format_date(date_raw) or nil
+  local auto     = meta_bool(sig['auto-sign'])
+
+  local out = {'<div class="signatory">'}
+
+  -- Signature field
+  out[#out+1] = '<div class="sig-field">'
+  if auto and name ~= "" then
+    out[#out+1] = string.format('<p class="sig-handwriting">%s</p>', html_escape(name))
+  else
+    out[#out+1] = '<p class="sig-handwriting sig-handwriting--blank"></p>'
+  end
+  out[#out+1] = '<div class="sig-line"></div>'
+  out[#out+1] = '<p class="sig-label">Signature</p>'
+  out[#out+1] = '</div>'
+
+  -- Name field
+  out[#out+1] = '<div class="sig-field">'
+  out[#out+1] = string.format('<p class="sig-value">%s</p>', html_escape(name))
+  out[#out+1] = '<div class="sig-line"></div>'
+  out[#out+1] = '<p class="sig-label">Name</p>'
+  out[#out+1] = '</div>'
+
+  -- Position field — only when role is supplied
+  if role then
+    out[#out+1] = '<div class="sig-field">'
+    out[#out+1] = string.format('<p class="sig-value">%s</p>', html_escape(role))
+    out[#out+1] = '<div class="sig-line"></div>'
+    out[#out+1] = '<p class="sig-label">Position</p>'
+    out[#out+1] = '</div>'
+  end
+
+  -- Date field — only when date is supplied
+  if date_str then
+    out[#out+1] = '<div class="sig-field">'
+    out[#out+1] = string.format('<p class="sig-value">%s</p>', html_escape(date_str))
+    out[#out+1] = '<div class="sig-line"></div>'
+    out[#out+1] = '<p class="sig-label">Date</p>'
+    out[#out+1] = '</div>'
+  end
+
+  out[#out+1] = '</div>'  -- .signatory
+  return table.concat(out, '\n')
+end
+
+-- Wrap a list of signatories in an execution-grid div.
+local function render_grid(sigs_list, default_date)
+  local out = {'<div class="execution-grid">'}
+  for _, sig in ipairs(sigs_list) do
+    out[#out+1] = render_signatory(sig, default_date)
+  end
+  out[#out+1] = '</div>'
+  return table.concat(out, '\n')
+end
+
 local function build_execution_html(meta)
   local exec = meta.execution
   if not exec then return nil end
@@ -255,6 +325,33 @@ local function build_execution_html(meta)
   local default_date = exec['agreement-date']
                        and pandoc.utils.stringify(exec['agreement-date']) or nil
 
+  -- Categorise signatories into three groups, preserving document order within each.
+  -- Witness detection: explicit `witness: true` flag, or role beginning with "Witness".
+  local parties   = {}
+  local org_order = {}  -- org names in first-seen order
+  local org_sigs  = {}  -- org_name → ordered list of signatories
+  local witnesses = {}
+
+  for _, sig in ipairs(sigs) do
+    local org      = sig.organisation and pandoc.utils.stringify(sig.organisation) or nil
+    local role_str = sig.role and pandoc.utils.stringify(sig.role) or ""
+    local is_witness = meta_bool(sig.witness)
+                       or role_str:lower():match("^witness") ~= nil
+
+    if is_witness then
+      witnesses[#witnesses+1] = sig
+    elseif org then
+      if not org_sigs[org] then
+        org_order[#org_order+1] = org
+        org_sigs[org] = {}
+      end
+      local g = org_sigs[org]
+      g[#g+1] = sig
+    else
+      parties[#parties+1] = sig
+    end
+  end
+
   local out = {
     '<section id="execution">',
     string.format('<h1 id="sec-execution">%s</h1>', html_escape(title)),
@@ -262,66 +359,27 @@ local function build_execution_html(meta)
   if intro then
     out[#out+1] = string.format('<p>%s</p>', html_escape(intro))
   end
-  out[#out+1] = '<div class="execution-grid">'
 
-  for _, sig in ipairs(sigs) do
-    local name     = sig.name         and pandoc.utils.stringify(sig.name)         or ""
-    local org      = sig.organisation and pandoc.utils.stringify(sig.organisation) or nil
-    local role     = sig.role         and pandoc.utils.stringify(sig.role)         or nil
-    local date_raw = (sig.date and pandoc.utils.stringify(sig.date)) or default_date
-    local date_str = date_raw and format_date(date_raw) or nil
-    local auto     = meta_bool(sig['auto-sign'])
-
-    out[#out+1] = '<div class="signatory">'
-
-    -- "For and on behalf of [Org] by" — only for org signatories
-    if org then
-      out[#out+1] = string.format(
-        '<p class="signatory-behalf">For and on behalf of %s by</p>',
-        html_escape(org)
-      )
-    end
-
-    -- Signature field: handwriting font when auto-sign, blank space otherwise
-    out[#out+1] = '<div class="sig-field">'
-    if auto and name ~= "" then
-      out[#out+1] = string.format('<p class="sig-handwriting">%s</p>', html_escape(name))
-    else
-      out[#out+1] = '<p class="sig-handwriting sig-handwriting--blank"></p>'
-    end
-    out[#out+1] = '<div class="sig-line"></div>'
-    out[#out+1] = '<p class="sig-label">Signature</p>'
-    out[#out+1] = '</div>'
-
-    -- Name field
-    out[#out+1] = '<div class="sig-field">'
-    out[#out+1] = string.format('<p class="sig-value">%s</p>', html_escape(name))
-    out[#out+1] = '<div class="sig-line"></div>'
-    out[#out+1] = '<p class="sig-label">Name</p>'
-    out[#out+1] = '</div>'
-
-    -- Position field — only for org signatories (role present)
-    if role then
-      out[#out+1] = '<div class="sig-field">'
-      out[#out+1] = string.format('<p class="sig-value">%s</p>', html_escape(role))
-      out[#out+1] = '<div class="sig-line"></div>'
-      out[#out+1] = '<p class="sig-label">Position</p>'
-      out[#out+1] = '</div>'
-    end
-
-    -- Date field — only when date is supplied
-    if date_str then
-      out[#out+1] = '<div class="sig-field">'
-      out[#out+1] = string.format('<p class="sig-value">%s</p>', html_escape(date_str))
-      out[#out+1] = '<div class="sig-line"></div>'
-      out[#out+1] = '<p class="sig-label">Date</p>'
-      out[#out+1] = '</div>'
-    end
-
-    out[#out+1] = '</div>'  -- .signatory
+  -- Personal parties grid
+  if #parties > 0 then
+    out[#out+1] = render_grid(parties, default_date)
   end
 
-  out[#out+1] = '</div>'   -- .execution-grid
+  -- Corporate signatories — each organisation gets its own "For and on behalf of"
+  -- intro paragraph (outside the grid) followed by its own grid.
+  for _, org_name in ipairs(org_order) do
+    out[#out+1] = string.format(
+      '<p class="signatory-behalf">For and on behalf of %s by</p>',
+      html_escape(org_name)
+    )
+    out[#out+1] = render_grid(org_sigs[org_name], default_date)
+  end
+
+  -- Witnesses grid
+  if #witnesses > 0 then
+    out[#out+1] = render_grid(witnesses, default_date)
+  end
+
   out[#out+1] = '</section>'
   return table.concat(out, '\n')
 end
